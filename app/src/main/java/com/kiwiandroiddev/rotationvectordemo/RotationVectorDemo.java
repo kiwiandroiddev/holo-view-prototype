@@ -50,6 +50,9 @@ public class RotationVectorDemo extends Activity {
 
     // Create a constant to convert nanoseconds to seconds.
     private static final float NS2S = 1.0f / 1000000000.0f;
+    private static final double DEG2RAD_FACTOR = Math.PI / 180.0f;
+    private static final double RAD2DEG_FACTOR = 180.0f / Math.PI;
+
     private static final String TAG = "RotationVectorDemo";
 
     private GLSurfaceView mGLSurfaceView;
@@ -57,8 +60,14 @@ public class RotationVectorDemo extends Activity {
     private MyRenderer mRenderer;
 
     private float timestamp;
+    private float currentXRotRads = 0.0f;
     private float currentYRotRads = 0.0f;
-    private float currentXScale = 1.0f;
+
+    private float frustumXOffset = 0.0f;
+    private float frustumYOffset = 0.0f;
+    private float frustumZNear = 1.0f;
+
+    private float screenWidthRatio = 1.0f;
 
     private boolean pendingViewerReset = false;
 
@@ -120,6 +129,7 @@ public class RotationVectorDemo extends Activity {
 
         public void start() {
             mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
+//            mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_UI);
         }
 
         public void stop() {
@@ -132,8 +142,11 @@ public class RotationVectorDemo extends Activity {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
 
                 if (pendingViewerReset) {
+                    currentXRotRads = 0.0f;
                     currentYRotRads = 0.0f;
-                    currentXScale = 1.0f;
+                    frustumXOffset = 0.0f;
+                    frustumYOffset = 0.0f;
+                    frustumZNear = 1.0f;
                     pendingViewerReset = false;
                 }
 
@@ -143,17 +156,30 @@ public class RotationVectorDemo extends Activity {
                 if (timestamp != 0) {
                     final float dT = (event.timestamp - timestamp) * NS2S;
 
+                    float dXRads = event.values[0] * dT;
                     float dYRads = event.values[1] * dT;
+
+                    currentXRotRads += dXRads;
                     currentYRotRads += dYRads;
 
+                    // shorten distance from observer to projection place as it is rotated.
+                    // distance from observer to center of viewport should remain constant
+                    // as a consequence of translating it
                     float cosTheta = FloatMath.cos(currentYRotRads);
-                    if (cosTheta > 0.0f) {
-                        // prevent division by 0
-                        currentXScale = 1.0f / cosTheta;
-                    }
+                    frustumZNear = cosTheta;
 
-//                    Log.d(TAG, String.format("dYRads = %.2f, currentYRotRads = %.2f, currentXScale = %.2f",
-//                            dYRads, currentYRotRads, currentXScale));
+                    // TODO include x rotation in this calculation
+
+                    // translate the viewport along its plane. This has the effect of distorting
+                    // the view more as the device screen is rotated.
+                    frustumYOffset = FloatMath.sin(currentXRotRads);
+                    frustumXOffset = FloatMath.sin(currentYRotRads);
+
+//                    Log.d(TAG, String.format("frustumZNear = %.2f, frustumXOffset = %.2f, frustumYOffset = %.2f",
+//                            frustumZNear, frustumXOffset, frustumYOffset));
+//
+//                    Log.d(TAG, String.format("dYRads = %.2f, currentYRotRads = %.2f",
+//                            dYRads, currentYRotRads));
                 }
 
                 timestamp = event.timestamp;
@@ -168,34 +194,60 @@ public class RotationVectorDemo extends Activity {
         }
 
         public void onDrawFrame(GL10 gl) {
+            gl.glMatrixMode(GL10.GL_PROJECTION);
+            gl.glLoadIdentity();
+            gl.glFrustumf(-screenWidthRatio + frustumXOffset,
+                           screenWidthRatio + frustumXOffset,
+                           -1 - frustumYOffset, 1 - frustumYOffset,
+//                           -1, 1,
+                           frustumZNear, frustumZNear + 100);
+
             // clear screen
             gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
             // set-up modelview matrix
             gl.glMatrixMode(GL10.GL_MODELVIEW);
             gl.glLoadIdentity();
+
+            gl.glPushMatrix();
+
 //            gl.glTranslatef(0, 0, -5.0f);
 //            gl.glTranslatef(0, 0, -5.0f);
-            gl.glTranslatef(3.0f, 0, -5.0f);
+//            gl.glTranslatef(0.0f, 0, -10.0f);
 //            gl.glTranslatef(4.0f, 0, 0);
 //            gl.glScalef(currentXScale, 1.0f, 1.0f);
 //            gl.glMultMatrixf(mRotationMatrix, 0);
-            gl.glRotatef(60.0f, 0.0f, 1.0f, 0.0f);
+//            gl.glRotatef(60.0f, 0.0f, 1.0f, 0.0f);
+
+            gl.glRotatef((float) (currentXRotRads * RAD2DEG_FACTOR * -1.0f), 1.0f, 0.0f, 0.0f);
+            gl.glRotatef((float) (currentYRotRads * RAD2DEG_FACTOR * -1.0f), 0.0f, 1.0f, 0.0f);
+
+
+            gl.glTranslatef(0.0f, 0, -10.0f);
+
+            gl.glPushMatrix();
+
+            gl.glRotatef((float) (currentXRotRads * RAD2DEG_FACTOR * 1.0f), 1.0f, 0.0f, 0.0f);
+            gl.glRotatef((float) (currentYRotRads * RAD2DEG_FACTOR * 1.0f), 0.0f, 1.0f, 0.0f);
+
             // draw our object
             gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
             gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
             mCube.draw(gl);
+            gl.glPopMatrix();
+
+            gl.glPopMatrix();
         }
 
         public void onSurfaceChanged(GL10 gl, int width, int height) {
             // set view-port
             gl.glViewport(0, 0, width, height);
             // set projection matrix
-            float ratio = (float) width / height;
-            gl.glMatrixMode(GL10.GL_PROJECTION);
-            gl.glLoadIdentity();
+            screenWidthRatio = (float) width / height;
+//            gl.glMatrixMode(GL10.GL_PROJECTION);
+//            gl.glLoadIdentity();
 //            gl.glFrustumf(-ratio, ratio, -1, 1, 1, 10);
-            Log.d(TAG, "ratio = " + ratio);
-            gl.glFrustumf(0, ratio*2, -1, 1, 1, 10);
+//            Log.d(TAG, "ratio = " + ratio);
+////            gl.glFrustumf(0, ratio*2, -1, 1, 1, 10);
         }
 
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
@@ -215,18 +267,18 @@ public class RotationVectorDemo extends Activity {
                         -1, -1, 1, 1, -1, 1,
                         1, 1, 1, -1, 1, 1,
                 };
-//                final float colors[] = {
-//                        0, 0, 0, 1, 1, 0, 0, 1,
-//                        1, 1, 0, 1, 0, 1, 0, 1,
-//                        0, 0, 1, 1, 1, 0, 1, 1,
-//                        1, 1, 1, 1, 0, 1, 1, 1,
-//                };
                 final float colors[] = {
-                        0, 0, 1, 1, 0, 0, 1, 1,
-                        0, 0, 1, 1, 0, 0, 1, 1,
-                        0, 0, 1, 1, 0, 0, 1, 1,
-                        0, 0, 1, 1, 0, 0, 1, 1,
+                        0, 0, 0, 1, 1, 0, 0, 1,
+                        1, 1, 0, 1, 0, 1, 0, 1,
+                        0, 0, 1, 1, 1, 0, 1, 1,
+                        1, 1, 1, 1, 0, 1, 1, 1,
                 };
+//                final float colors[] = {
+//                        0, 0, 1, 1, 0, 0, 1, 1,
+//                        0, 0, 1, 1, 0, 0, 1, 1,
+//                        0, 0, 1, 1, 0, 0, 1, 1,
+//                        0, 0, 1, 1, 0, 0, 1, 1,
+//                };
                 final byte indices[] = {
                         0, 4, 5, 0, 5, 1,
                         1, 5, 6, 1, 6, 2,
