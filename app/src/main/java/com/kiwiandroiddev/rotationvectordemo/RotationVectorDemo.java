@@ -33,6 +33,8 @@ import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.util.FloatMath;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 
 /**
  * Wrapper activity demonstrating the use of the new
@@ -56,15 +58,29 @@ public class RotationVectorDemo extends Activity {
 
     private float timestamp;
     private float currentYRotRads = 0.0f;
+    private float currentXScale = 1.0f;
+
+    private boolean pendingViewerReset = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        setContentView(R.layout.activity_main);
+
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mRenderer = new MyRenderer();
-        mGLSurfaceView = new GLSurfaceView(this);
+
+        mGLSurfaceView = (GLSurfaceView) findViewById(R.id.glsurfaceview);
         mGLSurfaceView.setRenderer(mRenderer);
-        setContentView(mGLSurfaceView);
+
+        Button resetViewButton = (Button) findViewById(R.id.reset_viewer_position_button);
+        resetViewButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                pendingViewerReset = true;
+            }
+        });
     }
 
     @Override
@@ -103,7 +119,7 @@ public class RotationVectorDemo extends Activity {
         }
 
         public void start() {
-            mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_UI);
+            mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
         }
 
         public void stop() {
@@ -115,8 +131,14 @@ public class RotationVectorDemo extends Activity {
             // that we received the proper event
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
 
-                Log.d(TAG, String.format("event.values = [%.2f, %.2f, %.2f]",
-                        event.values[0], event.values[1], event.values[2]));
+                if (pendingViewerReset) {
+                    currentYRotRads = 0.0f;
+                    currentXScale = 1.0f;
+                    pendingViewerReset = false;
+                }
+
+//                Log.d(TAG, String.format("event.values = [%.2f, %.2f, %.2f]",
+//                        event.values[0], event.values[1], event.values[2]));
 
                 if (timestamp != 0) {
                     final float dT = (event.timestamp - timestamp) * NS2S;
@@ -124,10 +146,14 @@ public class RotationVectorDemo extends Activity {
                     float dYRads = event.values[1] * dT;
                     currentYRotRads += dYRads;
 
-                    float currentXScale = FloatMath.cos(currentYRotRads) * 2;
+                    float cosTheta = FloatMath.cos(currentYRotRads);
+                    if (cosTheta > 0.0f) {
+                        // prevent division by 0
+                        currentXScale = 1.0f / cosTheta;
+                    }
 
-                    Log.d(TAG, String.format("dYRads = %.2f, currentYRotRads = %.2f, currentXScale = %.2f",
-                            dYRads, currentYRotRads, currentXScale));
+//                    Log.d(TAG, String.format("dYRads = %.2f, currentYRotRads = %.2f, currentXScale = %.2f",
+//                            dYRads, currentYRotRads, currentXScale));
                 }
 
                 timestamp = event.timestamp;
@@ -147,8 +173,13 @@ public class RotationVectorDemo extends Activity {
             // set-up modelview matrix
             gl.glMatrixMode(GL10.GL_MODELVIEW);
             gl.glLoadIdentity();
-            gl.glTranslatef(0, 0, -3.0f);
+//            gl.glTranslatef(0, 0, -5.0f);
+//            gl.glTranslatef(0, 0, -5.0f);
+            gl.glTranslatef(3.0f, 0, -5.0f);
+//            gl.glTranslatef(4.0f, 0, 0);
+//            gl.glScalef(currentXScale, 1.0f, 1.0f);
 //            gl.glMultMatrixf(mRotationMatrix, 0);
+            gl.glRotatef(60.0f, 0.0f, 1.0f, 0.0f);
             // draw our object
             gl.glEnableClientState(GL10.GL_VERTEX_ARRAY);
             gl.glEnableClientState(GL10.GL_COLOR_ARRAY);
@@ -162,14 +193,15 @@ public class RotationVectorDemo extends Activity {
             float ratio = (float) width / height;
             gl.glMatrixMode(GL10.GL_PROJECTION);
             gl.glLoadIdentity();
-            gl.glFrustumf(-ratio, ratio, -1, 1, 1, 10);
+//            gl.glFrustumf(-ratio, ratio, -1, 1, 1, 10);
+            Log.d(TAG, "ratio = " + ratio);
+            gl.glFrustumf(0, ratio*2, -1, 1, 1, 10);
         }
 
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
             // dither is enabled by default, we don't need it
             gl.glDisable(GL10.GL_DITHER);
-            // clear screen in white
-            gl.glClearColor(1,1,1,1);
+            gl.glClearColor(0,0,0,1);
         }
         class Cube {
             // initialize our cube
@@ -183,11 +215,17 @@ public class RotationVectorDemo extends Activity {
                         -1, -1, 1, 1, -1, 1,
                         1, 1, 1, -1, 1, 1,
                 };
+//                final float colors[] = {
+//                        0, 0, 0, 1, 1, 0, 0, 1,
+//                        1, 1, 0, 1, 0, 1, 0, 1,
+//                        0, 0, 1, 1, 1, 0, 1, 1,
+//                        1, 1, 1, 1, 0, 1, 1, 1,
+//                };
                 final float colors[] = {
-                        0, 0, 0, 1, 1, 0, 0, 1,
-                        1, 1, 0, 1, 0, 1, 0, 1,
-                        0, 0, 1, 1, 1, 0, 1, 1,
-                        1, 1, 1, 1, 0, 1, 1, 1,
+                        0, 0, 1, 1, 0, 0, 1, 1,
+                        0, 0, 1, 1, 0, 0, 1, 1,
+                        0, 0, 1, 1, 0, 0, 1, 1,
+                        0, 0, 1, 1, 0, 0, 1, 1,
                 };
                 final byte indices[] = {
                         0, 4, 5, 0, 5, 1,
