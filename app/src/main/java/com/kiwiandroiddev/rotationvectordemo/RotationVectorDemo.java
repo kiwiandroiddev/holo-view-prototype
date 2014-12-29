@@ -235,9 +235,13 @@ public class RotationVectorDemo extends Activity {
 //            gl.glMultMatrixf(mRotationMatrix, 0);
 //            gl.glRotatef(60.0f, 0.0f, 1.0f, 0.0f);
 
+            float rotAxisZOffset = 5.0f;
+            gl.glTranslatef(0.0f, 0, rotAxisZOffset);
+
             gl.glRotatef((float) (currentXRotRads * RAD2DEG_FACTOR * -1.0f), 1.0f, 0.0f, 0.0f);
             gl.glRotatef((float) (currentYRotRads * RAD2DEG_FACTOR * -1.0f), 0.0f, 1.0f, 0.0f);
 
+            gl.glTranslatef(0.0f, 0, -rotAxisZOffset);
 
             gl.glTranslatef(0.0f, 0, -40.0f);
 
@@ -245,6 +249,8 @@ public class RotationVectorDemo extends Activity {
             gl.glScalef(scale, scale, scale);
 
             gl.glPushMatrix();
+
+
 
             gl.glRotatef((float) (currentXRotRads * RAD2DEG_FACTOR * 1.0f), 1.0f, 0.0f, 0.0f);
             gl.glRotatef((float) (currentYRotRads * RAD2DEG_FACTOR * 1.0f), 0.0f, 1.0f, 0.0f);
