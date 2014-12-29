@@ -30,6 +30,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.opengl.GLSurfaceView;
+import android.opengl.Matrix;
 import android.os.Bundle;
 import android.util.FloatMath;
 import android.util.Log;
@@ -125,6 +126,22 @@ public class RotationVectorDemo extends Activity {
             mRotationMatrix[ 4] = 1;
             mRotationMatrix[ 8] = 1;
             mRotationMatrix[12] = 1;
+
+//            // rotation test
+//            float[] normalVector = new float[4];
+//            normalVector[0] = 0;
+//            normalVector[1] = 0;
+//            normalVector[2] = 1;
+//            normalVector[3] = 0;
+//
+//            Log.d(TAG, String.format("normalVector before = (%.2f, %.2f, %.2f, %.2f)",
+//                            normalVector[0],
+//                            normalVector[1],
+//                            normalVector[2],
+//                            normalVector[3]
+//                            ));
+//
+//            Matrix.rotateM(normalVector, 0, 45.0f, 0, 1, 0);
         }
 
         public void start() {
@@ -222,7 +239,10 @@ public class RotationVectorDemo extends Activity {
             gl.glRotatef((float) (currentYRotRads * RAD2DEG_FACTOR * -1.0f), 0.0f, 1.0f, 0.0f);
 
 
-            gl.glTranslatef(0.0f, 0, -10.0f);
+            gl.glTranslatef(0.0f, 0, -40.0f);
+
+            float scale = 5.0f;
+            gl.glScalef(scale, scale, scale);
 
             gl.glPushMatrix();
 
