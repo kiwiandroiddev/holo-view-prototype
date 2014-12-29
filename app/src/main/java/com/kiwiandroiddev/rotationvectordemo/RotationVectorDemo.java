@@ -25,6 +25,8 @@ import java.nio.FloatBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 import android.app.Activity;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -32,8 +34,11 @@ import android.hardware.SensorManager;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.FloatMath;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 
@@ -71,12 +76,16 @@ public class RotationVectorDemo extends Activity {
     private float screenWidthRatio = 1.0f;
 
     private boolean pendingViewerReset = false;
+    private float mRotAxisZOffset = 0.0f;
+    private float mScale = 5.0f;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
+
+        getActionBar().setTitle("Prototype");
 
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mRenderer = new MyRenderer();
@@ -94,12 +103,54 @@ public class RotationVectorDemo extends Activity {
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_main, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    @Override
     protected void onResume() {
         // Ideally a game should implement onResume() and onPause()
         // to take appropriate action when the activity loses focus
         super.onResume();
         mRenderer.start();
         mGLSurfaceView.onResume();
+
+        initFromPreferences();
+    }
+
+    private void initFromPreferences() {
+        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        try {
+            mRotAxisZOffset = Float.parseFloat(sharedPreferences.getString(SettingsActivity.PREF_ROT_Z_OFFSET, "0.0"));
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            mScale = Float.parseFloat(sharedPreferences.getString(SettingsActivity.PREF_SCALE, "5.0"));
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        }
+
+        // other prefs here
     }
 
     @Override
@@ -145,7 +196,8 @@ public class RotationVectorDemo extends Activity {
         }
 
         public void start() {
-            mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
+            mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
+//            mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
 //            mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_UI);
         }
 
@@ -235,18 +287,16 @@ public class RotationVectorDemo extends Activity {
 //            gl.glMultMatrixf(mRotationMatrix, 0);
 //            gl.glRotatef(60.0f, 0.0f, 1.0f, 0.0f);
 
-            float rotAxisZOffset = 5.0f;
-            gl.glTranslatef(0.0f, 0, rotAxisZOffset);
+            gl.glTranslatef(0.0f, 0, mRotAxisZOffset);
 
             gl.glRotatef((float) (currentXRotRads * RAD2DEG_FACTOR * -1.0f), 1.0f, 0.0f, 0.0f);
             gl.glRotatef((float) (currentYRotRads * RAD2DEG_FACTOR * -1.0f), 0.0f, 1.0f, 0.0f);
 
-            gl.glTranslatef(0.0f, 0, -rotAxisZOffset);
+            gl.glTranslatef(0.0f, 0, -mRotAxisZOffset);
 
             gl.glTranslatef(0.0f, 0, -40.0f);
 
-            float scale = 5.0f;
-            gl.glScalef(scale, scale, scale);
+            gl.glScalef(mScale, mScale, mScale);
 
             gl.glPushMatrix();
 
