@@ -1,6 +1,9 @@
 package com.kiwiandroiddev.rotationvectordemo;
 
 /**
+ * Hologram effect proof-of-concept.
+ * Based on RotationVectorDemo in the Android SDK samples.
+ *
  * Created by matt on 20/12/14.
  */
 /*
@@ -32,11 +35,9 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.opengl.GLSurfaceView;
-import android.opengl.Matrix;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.util.FloatMath;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -52,14 +53,14 @@ import android.widget.Button;
  * @see SensorManager
  *
  */
-public class RotationVectorDemo extends Activity {
+public class HologramViewActivity extends Activity {
 
     // Create a constant to convert nanoseconds to seconds.
     private static final float NS2S = 1.0f / 1000000000.0f;
     private static final double DEG2RAD_FACTOR = Math.PI / 180.0f;
     private static final double RAD2DEG_FACTOR = 180.0f / Math.PI;
 
-    private static final String TAG = "RotationVectorDemo";
+    private static final String TAG = "HologramViewActivity";
 
     private GLSurfaceView mGLSurfaceView;
     private SensorManager mSensorManager;
@@ -75,7 +76,7 @@ public class RotationVectorDemo extends Activity {
 
     private float screenWidthRatio = 1.0f;
 
-    private boolean pendingViewerReset = false;
+    private boolean pendingViewerPositionReset = false;
     private float mRotAxisZOffset = 0.0f;
     private float mScale = 5.0f;
 
@@ -84,8 +85,6 @@ public class RotationVectorDemo extends Activity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_main);
-
-        getActionBar().setTitle("Prototype");
 
         mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
         mRenderer = new MyRenderer();
@@ -97,23 +96,19 @@ public class RotationVectorDemo extends Activity {
         resetViewButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                pendingViewerReset = true;
+                pendingViewerPositionReset = true;
             }
         });
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
@@ -127,8 +122,6 @@ public class RotationVectorDemo extends Activity {
 
     @Override
     protected void onResume() {
-        // Ideally a game should implement onResume() and onPause()
-        // to take appropriate action when the activity loses focus
         super.onResume();
         mRenderer.start();
         mGLSurfaceView.onResume();
@@ -149,14 +142,10 @@ public class RotationVectorDemo extends Activity {
         } catch (NumberFormatException e) {
             e.printStackTrace();
         }
-
-        // other prefs here
     }
 
     @Override
     protected void onPause() {
-    // Ideally a game should implement onResume() and onPause()
-    // to take appropriate action when the activity loses focus
         super.onPause();
         mRenderer.stop();
         mGLSurfaceView.onPause();
@@ -165,40 +154,15 @@ public class RotationVectorDemo extends Activity {
     class MyRenderer implements GLSurfaceView.Renderer, SensorEventListener {
         private Cube mCube;
         private Sensor mRotationVectorSensor;
-        private final float[] mRotationMatrix = new float[16];
 
         public MyRenderer() {
             // find the rotation-vector sensor
             mRotationVectorSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
             mCube = new Cube();
-
-            // initialize the rotation matrix to identity
-            mRotationMatrix[ 0] = 1;
-            mRotationMatrix[ 4] = 1;
-            mRotationMatrix[ 8] = 1;
-            mRotationMatrix[12] = 1;
-
-//            // rotation test
-//            float[] normalVector = new float[4];
-//            normalVector[0] = 0;
-//            normalVector[1] = 0;
-//            normalVector[2] = 1;
-//            normalVector[3] = 0;
-//
-//            Log.d(TAG, String.format("normalVector before = (%.2f, %.2f, %.2f, %.2f)",
-//                            normalVector[0],
-//                            normalVector[1],
-//                            normalVector[2],
-//                            normalVector[3]
-//                            ));
-//
-//            Matrix.rotateM(normalVector, 0, 45.0f, 0, 1, 0);
         }
 
         public void start() {
             mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_FASTEST);
-//            mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
-//            mSensorManager.registerListener(this, mRotationVectorSensor, SensorManager.SENSOR_DELAY_UI);
         }
 
         public void stop() {
@@ -210,17 +174,14 @@ public class RotationVectorDemo extends Activity {
             // that we received the proper event
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
 
-                if (pendingViewerReset) {
+                if (pendingViewerPositionReset) {
                     currentXRotRads = 0.0f;
                     currentYRotRads = 0.0f;
                     frustumXOffset = 0.0f;
                     frustumYOffset = 0.0f;
                     frustumZNear = 1.0f;
-                    pendingViewerReset = false;
+                    pendingViewerPositionReset = false;
                 }
-
-//                Log.d(TAG, String.format("event.values = [%.2f, %.2f, %.2f]",
-//                        event.values[0], event.values[1], event.values[2]));
 
                 if (timestamp != 0) {
                     final float dT = (event.timestamp - timestamp) * NS2S;
@@ -243,22 +204,9 @@ public class RotationVectorDemo extends Activity {
                     // the view more as the device screen is rotated.
                     frustumYOffset = FloatMath.sin(currentXRotRads);
                     frustumXOffset = FloatMath.sin(currentYRotRads);
-
-//                    Log.d(TAG, String.format("frustumZNear = %.2f, frustumXOffset = %.2f, frustumYOffset = %.2f",
-//                            frustumZNear, frustumXOffset, frustumYOffset));
-//
-//                    Log.d(TAG, String.format("dYRads = %.2f, currentYRotRads = %.2f",
-//                            dYRads, currentYRotRads));
                 }
 
                 timestamp = event.timestamp;
-
-                // convert the rotation-vector to a 4x4 matrix. the matrix
-                // is interpreted by Open GL as the inverse of the
-                // rotation-vector, which is what we want.
-
-//                SensorManager.getRotationMatrixFromVector(
-//                        mRotationMatrix, event.values);
             }
         }
 
@@ -268,25 +216,18 @@ public class RotationVectorDemo extends Activity {
             gl.glFrustumf(-screenWidthRatio + frustumXOffset,
                            screenWidthRatio + frustumXOffset,
                            -1 - frustumYOffset, 1 - frustumYOffset,
-//                           -1, 1,
                            frustumZNear, frustumZNear + 100);
 
             // clear screen
             gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
+
             // set-up modelview matrix
             gl.glMatrixMode(GL10.GL_MODELVIEW);
             gl.glLoadIdentity();
 
             gl.glPushMatrix();
 
-//            gl.glTranslatef(0, 0, -5.0f);
-//            gl.glTranslatef(0, 0, -5.0f);
-//            gl.glTranslatef(0.0f, 0, -10.0f);
-//            gl.glTranslatef(4.0f, 0, 0);
-//            gl.glScalef(currentXScale, 1.0f, 1.0f);
-//            gl.glMultMatrixf(mRotationMatrix, 0);
-//            gl.glRotatef(60.0f, 0.0f, 1.0f, 0.0f);
-
+            // apply user-defined Z offset for rotation axis
             gl.glTranslatef(0.0f, 0, mRotAxisZOffset);
 
             gl.glRotatef((float) (currentXRotRads * RAD2DEG_FACTOR * -1.0f), 1.0f, 0.0f, 0.0f);
@@ -294,13 +235,12 @@ public class RotationVectorDemo extends Activity {
 
             gl.glTranslatef(0.0f, 0, -mRotAxisZOffset);
 
+            // default Z offset of 3D object from viewport
             gl.glTranslatef(0.0f, 0, -40.0f);
 
             gl.glScalef(mScale, mScale, mScale);
 
             gl.glPushMatrix();
-
-
 
             gl.glRotatef((float) (currentXRotRads * RAD2DEG_FACTOR * 1.0f), 1.0f, 0.0f, 0.0f);
             gl.glRotatef((float) (currentYRotRads * RAD2DEG_FACTOR * 1.0f), 0.0f, 1.0f, 0.0f);
@@ -319,11 +259,6 @@ public class RotationVectorDemo extends Activity {
             gl.glViewport(0, 0, width, height);
             // set projection matrix
             screenWidthRatio = (float) width / height;
-//            gl.glMatrixMode(GL10.GL_PROJECTION);
-//            gl.glLoadIdentity();
-//            gl.glFrustumf(-ratio, ratio, -1, 1, 1, 10);
-//            Log.d(TAG, "ratio = " + ratio);
-////            gl.glFrustumf(0, ratio*2, -1, 1, 1, 10);
         }
 
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
@@ -331,11 +266,13 @@ public class RotationVectorDemo extends Activity {
             gl.glDisable(GL10.GL_DITHER);
             gl.glClearColor(0,0,0,1);
         }
+
         class Cube {
             // initialize our cube
             private FloatBuffer mVertexBuffer;
             private FloatBuffer mColorBuffer;
             private ByteBuffer mIndexBuffer;
+
             public Cube() {
                 final float vertices[] = {
                         -1, -1, -1,	1, -1, -1,
@@ -377,6 +314,7 @@ public class RotationVectorDemo extends Activity {
                 mIndexBuffer.put(indices);
                 mIndexBuffer.position(0);
             }
+
             public void draw(GL10 gl) {
                 gl.glEnable(GL10.GL_CULL_FACE);
                 gl.glFrontFace(GL10.GL_CW);
@@ -386,6 +324,7 @@ public class RotationVectorDemo extends Activity {
                 gl.glDrawElements(GL10.GL_TRIANGLES, 36, GL10.GL_UNSIGNED_BYTE, mIndexBuffer);
             }
         }
+
         public void onAccuracyChanged(Sensor sensor, int accuracy) {
         }
     }
