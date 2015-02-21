@@ -16,6 +16,7 @@ Based on RotationVectorDemo in the Android SDK samples.
 * Automatically reset the observer's position after a few seconds of inactivity, animating the transition
 * Add a rotation factor to user settings
 * Make into Android live wallpaper
+* Support for a selection of 3D models and background scenes
  
 # Building
 
