@@ -9,3 +9,5 @@ This is achieved by both distorting the projection, and rotating the 3D cube pro
 It has some shortcomings:
 * The effect of a real 3D object isn't convincing with both eyes open since both eyes are still seeing the same 2D image at close range, regardless of their different perspective. I.e. The illusion is more convinving with one eye
 * The rotation and distortion of the scene isn't quite in sync with the actual device's rotation, even with the gryoscope sensor's reporting frequency set to `SENSOR_DELAY_FASTEST`. There is still a small yet perceivable lag. This could possibly be addressed by some sort of compensatory algorithm. E.g. when rotation is first reported, assume the device has already been rotating in that direction for X milliseconds and adjust accordingly.
+ 
+Based on RotationVectorDemo in the Android SDK samples.
