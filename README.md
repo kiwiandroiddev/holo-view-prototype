@@ -4,7 +4,7 @@
 
 This is a proof-of-concept for a hologram effect. The idea is to give the illusion of a 3D cube that appears to pop-out from the screen as the user rotates their device.
 
-This is achieved by both distorting the projection, and rotating the 3D cube proportionately to the rotation of the device as reported by the gyroscope sensor.
+This is achieved by both distorting the projection and rotating the 3D model proportionately to the rotation of the device as reported by the gyroscope sensor.
 
 It has some shortcomings:
 * The effect of a real 3D object isn't convincing with both eyes open since both eyes are still seeing the same 2D image at close range, regardless of their different perspective. I.e. The illusion is more convinving with one eye
