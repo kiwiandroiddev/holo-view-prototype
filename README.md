@@ -11,3 +11,16 @@ It has some shortcomings:
 * The rotation and distortion of the scene isn't quite in sync with the actual device's rotation, even with the gryoscope sensor's reporting frequency set to `SENSOR_DELAY_FASTEST`. There is still a small yet perceivable lag. This could possibly be addressed by some sort of compensatory algorithm. E.g. when rotation is first reported, assume the device has already been rotating in that direction for X milliseconds and adjust accordingly.
  
 Based on RotationVectorDemo in the Android SDK samples.
+
+# Todo
+* Automatically reset the observer's position after a few seconds of inactivity, animating the transition
+* Add a rotation factor to user settings
+* Make into Android live wallpaper
+ 
+# Building
+
+Import the top-level build.gradle with Android Studio
+
+# Contributions
+...are more than welcome, send me a pull request :)
+
