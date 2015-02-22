@@ -2,7 +2,7 @@
 
 ![Nexus 5 demo video](/../screenshots/holo2.gif?raw=true "Nexus 5 demo video")
 
-This is a proof-of-concept for a hologram effect. The idea is to give the illusion of a 3D cube that appears to pop-out from the screen as the user rotates their device.
+This is a proof-of-concept for a hologram effect. The idea is to give the illusion of a 3D cube popping out from the screen, apparent when the user rotates their device.
 
 This is achieved by both distorting the projection and rotating the 3D model proportionately to the rotation of the device as reported by the gyroscope sensor.
 
